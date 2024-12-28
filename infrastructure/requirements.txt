@@ -1,0 +1,14 @@
+Arpeggio==2.0.2
+attrs==24.3.0
+debugpy==1.8.11
+dill==0.3.9
+grpcio==1.66.2
+parver==0.5
+protobuf==4.25.5
+pulumi==3.144.1
+pulumi_aws==5.42.0
+PyYAML==6.0.2
+semver==2.13.0
+setuptools==75.6.0
+six==1.17.0
+wheel==0.45.1
