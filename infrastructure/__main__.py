@@ -281,6 +281,11 @@ jenkins_instance = aws.ec2.Instance(
         "volume_type": "gp3",
         "iops": 3000,
     },
+    metadata_options={
+        "http_endpoint": "enabled",
+        "http_tokens": "required",  # This enforces IMDSv2
+        "http_put_response_hop_limit": 1,
+    },
     tags={"Name": "jenkins"},
 )
 
