@@ -1,8 +1,8 @@
 pipeline {
     agent any
-       options {
-        timeout(time: 1, unit: 'HOURS')  // Add timeout
-        disableConcurrentBuilds()        // Prevent parallel builds
+    options {
+        timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds()
     }
     environment {
         ECR_REPO = "${env.ECR_URL}"
@@ -10,21 +10,18 @@ pipeline {
         DOCKER_BUILDKIT = '0'
     }
     stages {
-        stage('Debug Environment') {  
+        stage('Debug Environment') {
             steps {
-                 sh '''
+                sh '''
                     echo "=== Environment Variables ==="
                     echo "ECR_REPO: $ECR_REPO"
                     echo "ECR_URL: $ECR_URL"
                     echo "AWS_REGION: $AWS_REGION"
                     echo "BUILD_NUMBER: $BUILD_NUMBER"
-                    
                     echo "=== Docker Info ==="
                     docker info
-                    
                     echo "=== AWS ECR Login Test ==="
                     aws ecr get-login-password --region ${AWS_REGION} || echo "ECR login failed"
-                    
                     echo "=== Directory Structure ==="
                     ls -la
                 '''
@@ -39,22 +36,22 @@ pipeline {
             steps {
                 dir('app') {
                     script {
-                        try{
-                     sh '''
-                    echo "=== Building Docker Image ==="
-                    echo "Building image: ${ECR_REPO}:${BUILD_NUMBER}"
-                           docker build \
+                        try {
+                            sh '''
+                                echo "=== Building Docker Image ==="
+                                echo "Building image: ${ECR_REPO}:${BUILD_NUMBER}"
+                                docker build \
                                 --memory=4g \
                                 --memory-swap=8g \
                                 -t ${ECR_REPO}:${BUILD_NUMBER} \
                                 --pull .
-                    echo "=== Image Built Successfully ==="
-                    docker images | grep ${ECR_REPO}
-                    '''  
-                    }}
-                    catch (Exception e){
-                          sh 'docker system prune -f'
+                                echo "=== Image Built Successfully ==="
+                                docker images | grep ${ECR_REPO}
+                            '''
+                        } catch (Exception e) {
+                            sh 'docker system prune -f'
                             throw e
+                        }
                     }
                 }
             }
