@@ -98,11 +98,23 @@ blueocean
 chmod +x /usr/local/bin/jenkins-plugin-cli
 chown -R jenkins:jenkins /var/lib/jenkins
 
+# Add memory configuration for Jenkins
+echo 'JAVA_ARGS="-Xmx4096m -Xms2048m"' >> /etc/default/jenkins
+
+# Add Docker memory limits
+cat <<EOF > /etc/docker/daemon.json
+{
+  "memory": "8g",
+  "memory-swap": "16g"
+}
+EOF
+
 # Restart Jenkins
 systemctl restart jenkins
 
 # Wait for Jenkins to restart
 sleep 30
+
 
 echo "Jenkins setup completed"
 """

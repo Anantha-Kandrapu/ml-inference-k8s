@@ -1,5 +1,9 @@
 pipeline {
     agent any
+       options {
+        timeout(time: 1, unit: 'HOURS')  // Add timeout
+        disableConcurrentBuilds()        // Prevent parallel builds
+    }
     environment {
         ECR_REPO = "${env.ECR_URL}"
         AWS_REGION = 'us-west-2'
@@ -35,13 +39,22 @@ pipeline {
             steps {
                 dir('app') {
                     script {
+                        try{
                      sh '''
                     echo "=== Building Docker Image ==="
                     echo "Building image: ${ECR_REPO}:${BUILD_NUMBER}"
-                    docker build -t ${ECR_REPO}:${BUILD_NUMBER} --pull .
+                           docker build \
+                                --memory=4g \
+                                --memory-swap=8g \
+                                -t ${ECR_REPO}:${BUILD_NUMBER} \
+                                --pull .
                     echo "=== Image Built Successfully ==="
                     docker images | grep ${ECR_REPO}
                     '''  
+                    }}
+                    catch (Exception e){
+                          sh 'docker system prune -f'
+                            throw e
                     }
                 }
             }
@@ -77,7 +90,12 @@ pipeline {
             sh """
                 docker rmi ${env.ECR_URL}:${env.BUILD_NUMBER} || true
                 docker rmi ${env.ECR_URL}:latest || true
+                docker system prune -f
+                docker image prune -f
             """
+        }
+        failure {
+            echo 'Build failed!'
         }
     }
 }
