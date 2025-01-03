@@ -1,15 +1,26 @@
 FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
 
+# Create a non-root user
+RUN adduser --disabled-password --gecos '' appuser
+
 WORKDIR /app
+
+# Switch to the non-root user
+USER appuser
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+# Create and activate a virtual environment
+ENV VIRTUAL_ENV=/app/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
