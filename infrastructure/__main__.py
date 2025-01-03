@@ -25,10 +25,28 @@ key_pair = aws.ec2.KeyPair(
     tags={"Name": "mlInference"},
 )
 
-# Create IAM role for EC2 instances
 instance_role = aws.iam.Role(
     "instance-role",
     assume_role_policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"Service": "ec2.amazonaws.com"},
+                    "Action": "sts:AssumeRole",
+                }
+            ],
+        }
+    ),
+)
+
+instance_profile = aws.iam.InstanceProfile("instance-profile", role=instance_role.name)
+
+# Create a separate policy with the ECR permissions
+ecr_policy = aws.iam.Policy(
+    "ecr-policy",
+    policy=json.dumps(
         {
             "Version": "2012-10-17",
             "Statement": [
@@ -55,7 +73,12 @@ instance_role = aws.iam.Role(
     ),
 )
 
-instance_profile = aws.iam.InstanceProfile("instance-profile", role=instance_role.name)
+# Attach the ECR policy to the instance role
+aws.iam.RolePolicyAttachment(
+    "ecr-policy-attachment",
+    role=instance_role.name,
+    policy_arn=ecr_policy.arn,
+)
 
 # Create ECR repository
 ecr_repo = aws.ecr.Repository(
