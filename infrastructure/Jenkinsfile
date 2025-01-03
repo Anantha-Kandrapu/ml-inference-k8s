@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    environment {
+        ECR_REPO = '${ECR_REPO}'
+        AWS_REGION = 'us-west-2'
+        DOCKER_BUILDKIT = '1'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps {
+                dir('app') {
+                    script {
+                        docker.build("${ECR_REPO}:${env.BUILD_NUMBER}", "--pull .")
+                    }
+                }
+            }
+        }
+        stage('Push') {
+            steps {
+                script {
+                    // Use AWS CLI which will automatically use instance role
+                    sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+                        docker push ${ECR_REPO}:${env.BUILD_NUMBER}
+                        docker push ${ECR_REPO}:latest
+                    """
+                }
+            }
+        }
+        stage('Update Deployment') {
+            steps {
+                script {
+                    sh """
+                        aws ssm put-parameter \
+                        --region ${AWS_REGION} \
+                        --name "/ml-inference/latest-image" \
+                        --value "${ECR_REPO}:${env.BUILD_NUMBER}" \
+                        --type String \
+                        --overwrite
+                    """
+                }
+            }
+        }
+    }
+    post {
+        always {
+            sh "docker rmi ${ECR_REPO}:${env.BUILD_NUMBER} || true"
+            sh "docker rmi ${ECR_REPO}:latest || true"
+        }
+    }
+}

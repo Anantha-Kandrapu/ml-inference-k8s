@@ -1,8 +1,0 @@
-config:
-  aws:region: us-west-2 
-  ml-inference:master_instance_type: c5.2xlarge
-  ml-inference:worker_instance_type: g4dn.xlarge
-  ml-inference:worker_count: 3
-  ml-inference:key_name: ml-inference
-  ml-inference:master_ami_id: ami-0ee23bfc74a881de5
-  ml-inference:worker_ami_id: ami-0ee23bfc74a881de5
