@@ -8,9 +8,22 @@ pipeline {
     stages {
         stage('Debug Environment') {  
             steps {
-                sh 'printenv | sort'  
-                
-                sh 'echo "ECR_URL: $ECR_URL"'
+                 sh '''
+                    echo "=== Environment Variables ==="
+                    echo "ECR_REPO: $ECR_REPO"
+                    echo "ECR_URL: $ECR_URL"
+                    echo "AWS_REGION: $AWS_REGION"
+                    echo "BUILD_NUMBER: $BUILD_NUMBER"
+                    
+                    echo "=== Docker Info ==="
+                    docker info
+                    
+                    echo "=== AWS ECR Login Test ==="
+                    aws ecr get-login-password --region ${AWS_REGION} || echo "ECR login failed"
+                    
+                    echo "=== Directory Structure ==="
+                    ls -la
+                '''
             }
         }
         stage('Checkout') {
@@ -22,8 +35,13 @@ pipeline {
             steps {
                 dir('app') {
                     script {
-                        
-                        sh "docker build -t ${env.ECR_URL}:${env.BUILD_NUMBER} --pull ."
+                     sh '''
+                    echo "=== Building Docker Image ==="
+                    echo "Building image: ${ECR_REPO}:${BUILD_NUMBER}"
+                    docker build -t ${ECR_REPO}:${BUILD_NUMBER} --pull .
+                    echo "=== Image Built Successfully ==="
+                    docker images | grep ${ECR_REPO}
+                    '''  
                     }
                 }
             }
