@@ -1,4 +1,6 @@
-def get_jenkins_user_data(ecr_url, github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s"):
+def get_jenkins_user_data(
+    ecr_url, github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s"
+):
     return f"""#!/bin/bash
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 echo "Starting Jenkins setup..."
@@ -57,6 +59,9 @@ EOF
 mkdir -p /var/lib/jenkins/init.groovy.d
 cat <<EOF > /var/lib/jenkins/init.groovy.d/set-env.groovy
 import jenkins.model.Jenkins
+import jenkins.model.JenkinsLocationConfiguration
+import jenkins.model.Jenkins
+
 def instance = Jenkins.getInstance()
 def globalNodeProperties = instance.getGlobalNodeProperties()
 def envVarsNodePropertyList = globalNodeProperties.getAll(hudson.slaves.EnvironmentVariablesNodeProperty.class)
@@ -68,7 +73,14 @@ if (envVars == null) {{
 envVars.put("ECR_URL", "{ecr_url}")
 envVars.put("GITHUB_REPO", "{github_repo}")
 instance.save()
+def jenkinsLocationConfiguration = JenkinsLocationConfiguration.get()
+def publicIP = new URL("http://169.254.169.254/latest/meta-data/public-ipv4").text
+jenkinsLocationConfiguration.setUrl("http://" + publicIP + ":8080/")
+jenkinsLocationConfiguration.save()
 EOF
+# Set correct permissions
+chown -R jenkins:jenkins /var/lib/jenkins/init.groovy.d/
+chmod -R 755 /var/lib/jenkins/init.groovy.d/
 
 # Download Jenkins plugin CLI
 curl -L https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.12.11/jenkins-plugin-manager-2.12.11.jar -o /usr/local/bin/jenkins-plugin-cli.jar
