@@ -57,11 +57,10 @@ EOF
 
 # Store ECR URL and GitHub repo in Jenkins global environment
 mkdir -p /var/lib/jenkins/init.groovy.d
+# Around line 89, modify the existing set-env.groovy script to include IP update
 cat <<EOF > /var/lib/jenkins/init.groovy.d/set-env.groovy
 import jenkins.model.Jenkins
 import jenkins.model.JenkinsLocationConfiguration
-import jenkins.model.Jenkins
-
 def instance = Jenkins.getInstance()
 def globalNodeProperties = instance.getGlobalNodeProperties()
 def envVarsNodePropertyList = globalNodeProperties.getAll(hudson.slaves.EnvironmentVariablesNodeProperty.class)
@@ -73,11 +72,15 @@ if (envVars == null) {{
 envVars.put("ECR_URL", "{ecr_url}")
 envVars.put("GITHUB_REPO", "{github_repo}")
 instance.save()
+
+# Add these lines for IP update
 def jenkinsLocationConfiguration = JenkinsLocationConfiguration.get()
 def publicIP = new URL("http://169.254.169.254/latest/meta-data/public-ipv4").text
 jenkinsLocationConfiguration.setUrl("http://" + publicIP + ":8080/")
 jenkinsLocationConfiguration.save()
 EOF
+
+
 # Set correct permissions
 chown -R jenkins:jenkins /var/lib/jenkins/init.groovy.d/
 chmod -R 755 /var/lib/jenkins/init.groovy.d/
@@ -115,10 +118,10 @@ echo 'JAVA_ARGS="-Xmx4096m -Xms2048m"' >> /etc/default/jenkins
 
 # Add Docker memory limits
 cat <<EOF > /etc/docker/daemon.json
-{
+{{
   "memory": "8g",
   "memory-swap": "16g"
-}
+}}
 EOF
 
 # Restart Jenkins
