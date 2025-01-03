@@ -94,6 +94,7 @@ pulumi.export("ecr_repo_url", ecr_repo.repository_url)
 # Config
 EC2_CONFIG = {
     "master_instance_type": "c5.2xlarge",
+    "jenkins_instance_type": "c6i.4xlarge",
     "worker_instance_type": "g4dn.xlarge",
     "worker_count": 3,
     "master_ami_id": "ami-0b8c6b923777519db",
@@ -268,7 +269,7 @@ jenkins_sg = aws.ec2.SecurityGroup(
 
 jenkins_instance = aws.ec2.Instance(
     "jenkins",
-    instance_type="c5.xlarge",
+    instance_type=EC2_CONFIG["jenkins_instance_type"],
     ami=EC2_CONFIG["master_ami_id"],
     key_name=EC2_CONFIG["key_name"],
     subnet_id=public_subnets[0].id,
