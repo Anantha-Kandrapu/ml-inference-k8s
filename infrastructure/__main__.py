@@ -33,9 +33,22 @@ instance_role = aws.iam.Role(
             "Version": "2012-10-17",
             "Statement": [
                 {
-                    "Action": "sts:AssumeRole",
-                    "Principal": {"Service": "ec2.amazonaws.com"},
                     "Effect": "Allow",
+                    "Action": [
+                        "ecr:GetAuthorizationToken",
+                        "ecr:BatchCheckLayerAvailability",
+                        "ecr:GetDownloadUrlForLayer",
+                        "ecr:GetRepositoryPolicy",
+                        "ecr:DescribeRepositories",
+                        "ecr:ListImages",
+                        "ecr:DescribeImages",
+                        "ecr:BatchGetImage",
+                        "ecr:InitiateLayerUpload",
+                        "ecr:UploadLayerPart",
+                        "ecr:CompleteLayerUpload",
+                        "ecr:PutImage",
+                    ],
+                    "Resource": "*",
                 }
             ],
         }
@@ -56,7 +69,7 @@ ecr_repo = aws.ecr.Repository(
 pulumi.export("ecr_repo_url", ecr_repo.repository_url)
 
 # Config
-EC2_CONFIG = {\
+EC2_CONFIG = {
     "master_instance_type": "c5.2xlarge",
     "worker_instance_type": "g4dn.xlarge",
     "worker_count": 3,
