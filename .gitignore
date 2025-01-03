@@ -1,5 +1,5 @@
 *.pyc
 venv/
-.vsco
+.vscode/
 infrastructure/ml-inference
 infrastructure/ml-inference.pub
