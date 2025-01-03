@@ -1,11 +1,18 @@
 pipeline {
     agent any
     environment {
-        ECR_REPO = '${ECR_REPO}'
+        ECR_REPO = env.ECR_URL  
         AWS_REGION = 'us-west-2'
         DOCKER_BUILDKIT = '1'
     }
     stages {
+        stage('Debug Environment') {  
+            steps {
+                sh 'printenv | sort'  
+                
+                sh 'echo "ECR_URL: $ECR_URL"'
+            }
+        }
         stage('Checkout') {
             steps {
                 checkout scm
@@ -15,7 +22,8 @@ pipeline {
             steps {
                 dir('app') {
                     script {
-                        docker.build("${ECR_REPO}:${env.BUILD_NUMBER}", "--pull .")
+                        
+                        sh "docker build -t ${env.ECR_URL}:${env.BUILD_NUMBER} --pull ."
                     }
                 }
             }
@@ -23,11 +31,10 @@ pipeline {
         stage('Push') {
             steps {
                 script {
-                    // Use AWS CLI which will automatically use instance role
                     sh """
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
-                        docker push ${ECR_REPO}:${env.BUILD_NUMBER}
-                        docker push ${ECR_REPO}:latest
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_URL}
+                        docker push ${env.ECR_URL}:${env.BUILD_NUMBER}
+                        docker push ${env.ECR_URL}:latest
                     """
                 }
             }
@@ -39,7 +46,7 @@ pipeline {
                         aws ssm put-parameter \
                         --region ${AWS_REGION} \
                         --name "/ml-inference/latest-image" \
-                        --value "${ECR_REPO}:${env.BUILD_NUMBER}" \
+                        --value "${env.ECR_URL}:${env.BUILD_NUMBER}" \
                         --type String \
                         --overwrite
                     """
@@ -49,8 +56,10 @@ pipeline {
     }
     post {
         always {
-            sh "docker rmi ${ECR_REPO}:${env.BUILD_NUMBER} || true"
-            sh "docker rmi ${ECR_REPO}:latest || true"
+            sh """
+                docker rmi ${env.ECR_URL}:${env.BUILD_NUMBER} || true
+                docker rmi ${env.ECR_URL}:latest || true
+            """
         }
     }
 }
