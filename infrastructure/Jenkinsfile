@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        ECR_REPO = env.ECR_URL  
+        ECR_REPO = "${env.ECR_URL}"
         AWS_REGION = 'us-west-2'
         DOCKER_BUILDKIT = '1'
     }
