@@ -7,9 +7,22 @@ pipeline {
     environment {
         ECR_REPO = "${env.ECR_URL}"
         AWS_REGION = 'us-west-2'
-        DOCKER_BUILDKIT = '0'
+        DOCKER_BUILDKIT = '0',
+        AWS_DEFAULT_REGION = 'us-west-2'
     }
     stages {
+        stage('AWS Configuration') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    sh 'aws sts get-caller-identity'
+                }
+            }
+        }
         stage('Debug Environment') {
             steps {
                 sh '''
@@ -84,7 +97,7 @@ pipeline {
             steps {
                 script {
                     def workerIps = sh(
-                        script: 'aws ec2 describe-instances --filters "Name=tag:Role,Values=worker" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text',
+                        script: 'aws ec2 describe-instances --filters "Name=tag:Role,Values=worker" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text --region ${AWS_REGION}',
                         returnStdout: true
                     ).trim()
 
