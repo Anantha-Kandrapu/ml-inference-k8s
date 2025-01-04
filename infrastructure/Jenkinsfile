@@ -8,6 +8,7 @@ pipeline {
         ECR_REPO = "${env.ECR_URL}"
         AWS_REGION = 'us-west-2'
         DOCKER_BUILDKIT = '0'
+        WORKER_IPS = sh(script: 'aws ec2 describe-instances --filters "Name=tag:Role,Values=worker" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text', returnStdout: true).trim()
     }
     stages {
         stage('Debug Environment') {
@@ -77,6 +78,48 @@ pipeline {
                         --type String \
                         --overwrite
                     """
+                }
+            }
+        }
+    }
+    stage('Deploy to Workers') {
+            steps {
+                script {
+                    def workerList = WORKER_IPS.split()
+                    for (worker in workerList) {
+                        try {
+                            sh """
+                                ssh -o StrictHostKeyChecking=no ubuntu@${worker} '
+                                    # Login to ECR
+                                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+
+                                    # Pull new image
+                                    docker pull ${ECR_REPO}:${BUILD_NUMBER}
+
+                                    # Stop existing container (if any)
+                                    docker ps -q --filter "ancestor=${ECR_REPO}" | xargs -r docker stop
+
+                                    # Remove old containers
+                                    docker container prune -f
+
+                                    # Run new container
+                                    docker run -d \
+                                        --gpus all \
+                                        -p 8000:8000 \
+                                        --restart unless-stopped \
+                                        ${ECR_REPO}:${BUILD_NUMBER}
+
+                                    # Clean up old images
+                                    docker image prune -a -f
+                                '
+                            """
+                            echo "Successfully deployed to worker: ${worker}"
+                        } catch (Exception e) {
+                            echo "Failed to deploy to worker: ${worker}"
+                            echo "Error: ${e.getMessage()}"
+                            currentBuild.result = 'UNSTABLE'
+                        }
+                    }
                 }
             }
         }

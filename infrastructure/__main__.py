@@ -130,11 +130,6 @@ ssm_policy = aws.iam.Policy(
     ),
 )
 
-# Attach SSM policy to instance role
-aws.iam.RolePolicyAttachment(
-    "ssm-policy-attachment", role=instance_role.name, policy_arn=ssm_policy.arn
-)
-
 # Attach the ECR policy to the instance role
 aws.iam.RolePolicyAttachment(
     "ecr-policy-attachment",
