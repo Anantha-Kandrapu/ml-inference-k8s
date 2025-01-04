@@ -86,7 +86,6 @@ pipeline {
         always {
             sh """
                 docker rmi ${env.ECR_URL}:${env.BUILD_NUMBER} || true
-                docker rmi ${env.ECR_URL}:latest || true
                 docker system prune -f
                 docker image prune -f
             """
