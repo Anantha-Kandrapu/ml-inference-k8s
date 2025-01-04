@@ -10,6 +10,16 @@ pipeline {
         DOCKER_BUILDKIT = '1'
     }
     stages {
+        stage('Verify BuildKit') {
+            steps {
+                sh '''
+            echo "Docker BuildKit status:"
+            docker info | grep -i buildkit
+            echo "DOCKER_BUILDKIT value: $DOCKER_BUILDKIT"
+        '''
+            }
+        }
+
         stage('Debug Environment') {
             steps {
                 sh '''
