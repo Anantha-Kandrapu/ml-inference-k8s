@@ -65,6 +65,16 @@ ecr_policy = aws.iam.Policy(
                         "ecr:UploadLayerPart",
                         "ecr:CompleteLayerUpload",
                         "ecr:PutImage",
+                        "ecr:GetLifecyclePolicy",
+                        "ecr:PutLifecyclePolicy",
+                        "ecr:DeleteLifecyclePolicy",
+                        "ecr:PutImageTagMutability",
+                        "ecr:StartImageScan",
+                        "ecr:GetImageScanFindings",
+                        "ecr:CreateRepository",
+                        "ecr:DeleteRepository",
+                        "ecr:TagResource",
+                        "ecr:UntagResource",
                     ],
                     "Resource": "*",
                 }
@@ -72,12 +82,68 @@ ecr_policy = aws.iam.Policy(
         }
     ),
 )
+cloudwatch_policy = aws.iam.Policy(
+    "cloudwatch-policy",
+    policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "logs:DescribeLogStreams",
+                    ],
+                    "Resource": "arn:aws:logs:*:*:*",
+                }
+            ],
+        }
+    ),
+)
+aws.iam.RolePolicyAttachment(
+    "cloudwatch-policy-attachment",
+    role=instance_role.name,
+    policy_arn=cloudwatch_policy.arn,
+)
+# Create SSM policy
+ssm_policy = aws.iam.Policy(
+    "ssm-policy",
+    policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "ssm:PutParameter",
+                        "ssm:GetParameter",
+                        "ssm:GetParameters",
+                        "ssm:DeleteParameter",
+                        "ssm:DescribeParameters",
+                    ],
+                    "Resource": "arn:aws:ssm:us-west-2:*:parameter/*",
+                }
+            ],
+        }
+    ),
+)
+
+# Attach SSM policy to instance role
+aws.iam.RolePolicyAttachment(
+    "ssm-policy-attachment", role=instance_role.name, policy_arn=ssm_policy.arn
+)
 
 # Attach the ECR policy to the instance role
 aws.iam.RolePolicyAttachment(
     "ecr-policy-attachment",
     role=instance_role.name,
     policy_arn=ecr_policy.arn,
+)
+
+aws.iam.RolePolicyAttachment(
+    "ssm-policy-attachment", role=instance_role.name, policy_arn=ssm_policy.arn
 )
 
 # Create ECR repository
