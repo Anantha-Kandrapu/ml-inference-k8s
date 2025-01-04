@@ -9,37 +9,40 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir --upgrade pip
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser
 
-# Set up the working directory and change its ownership
+# Set up the working directory
 WORKDIR /app
-RUN chown appuser:appuser /app
 
 # Create and activate a virtual environment
 ENV VIRTUAL_ENV=/app/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+# Set ownership after creating virtual environment
+RUN chown -R appuser:appuser /app
+
 # Switch to the non-root user
 USER appuser
 
-# Copy and install requirements first to leverage Docker cache
+# Upgrade pip in the virtual environment
+RUN pip install --no-cache-dir --upgrade pip
+
+# Copy requirements with correct ownership
 COPY --chown=appuser:appuser requirements.txt .
 
-# Install dependencies with caching
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only necessary application files
+# Copy application files with correct ownership
 COPY --chown=appuser:appuser . .
 
-# Create a non-root user directory for the application
-RUN mkdir -p /app/data && \
-    chown -R appuser:appuser /app/data
+# Create data directory
+RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 8000
