@@ -8,6 +8,7 @@ echo "Starting Jenkins setup..."
 # Install Java 17
 apt-get update
 apt-get install -y openjdk-17-jdk
+apt-get install -y awscli git jq
 
 # Install Jenkins
 curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo tee \
@@ -19,9 +20,10 @@ apt-get update
 apt-get install -y jenkins
 
 # Install Docker
-apt-get install -y docker.io
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 usermod -aG docker jenkins
 systemctl enable docker
+systemctl start docker
 
 # Configure Docker with BuildKit
 mkdir -p /etc/docker
@@ -34,9 +36,12 @@ cat <<EOF > /etc/docker/daemon.json
     "memory-swap": "16g"
 }}
 EOF
-
+usermod -aG docker jenkins
+usermod -aG docker ubuntu
 # Restart Docker to apply changes
 systemctl restart docker
+newgrp docker
+chmod 666 /var/run/docker.sock
 
 # Install BuildKit standalone (optional, as backup)
 apt-get install -y \
@@ -118,6 +123,7 @@ cat <<EOF > /usr/local/bin/jenkins-plugin-cli
 java -jar /usr/local/bin/jenkins-plugin-cli.jar "\$@"
 EOF
 chmod +x /usr/local/bin/jenkins-plugin-cli
+chown -R jenkins:jenkins /var/lib/jenkins
 
 # Install Jenkins plugins
 jenkins-plugin-cli --plugins \
@@ -145,6 +151,6 @@ echo 'JAVA_ARGS="-Xmx4096m -Xms2048m"' >> /etc/default/jenkins
 systemctl restart jenkins
 
 # Wait for Jenkins to restart
-sleep 30
+sleep 20
 echo "Jenkins setup completed"
 """

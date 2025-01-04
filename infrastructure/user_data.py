@@ -16,7 +16,7 @@ add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(
 
 # Install Docker and Kubernetes components
 apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io kubelet kubeadm kubectl
+apt-get install -y docker-ce docker-ce-cli docker.io kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
 
 # Configure containerd

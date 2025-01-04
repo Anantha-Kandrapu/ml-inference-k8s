@@ -379,9 +379,11 @@ pulumi.export("sg_id", worker_sg.id)
 
 # Create worker node
 logger.info("Creating worker node...")
-try:
+# Create worker nodes
+worker_nodes = []
+for i in range(EC2_CONFIG["worker_count"]):
     worker = aws.ec2.Instance(
-        "ml-worker",
+        f"ml-worker-{i}",
         instance_type=EC2_CONFIG["worker_instance_type"],
         ami=EC2_CONFIG["worker_ami_id"],
         key_name=EC2_CONFIG["key_name"],
@@ -398,14 +400,15 @@ try:
             "http_put_response_hop_limit": 1,
         },
         user_data=worker_user_data,
-        tags={"Name": "ml-worker"},
+        tags={"Name": f"ml-worker-{i}"},
         opts=pulumi.ResourceOptions(depends_on=[master]),
     )
-except Exception as e:
-    logger.error(f"Failed to create worker: {str(e)}", exc_info=True)
-    raise
+    worker_nodes.append(worker)
+
 
 # Export values
 pulumi.export("vpc_id", vpc.id)
+# Export master & worker IPs
 pulumi.export("master_ip", master.public_ip)
-pulumi.export("worker_ip", worker.private_ip)
+for i, worker in enumerate(worker_nodes):
+    pulumi.export(f"worker_{i}_ip", worker.private_ip)
