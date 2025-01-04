@@ -7,7 +7,7 @@ pipeline {
     environment {
         ECR_REPO = "${env.ECR_URL}"
         AWS_REGION = 'us-west-2'
-        DOCKER_BUILDKIT = '0',
+        DOCKER_BUILDKIT = '0'
         AWS_DEFAULT_REGION = 'us-west-2'
     }
     stages {
