@@ -11,18 +11,6 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-west-2'
     }
     stages {
-        stage('AWS Configuration') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                ]]) {
-                    sh 'aws sts get-caller-identity'
-                }
-            }
-        }
         stage('Debug Environment') {
             steps {
                 sh '''
@@ -97,9 +85,17 @@ pipeline {
             steps {
                 script {
                     def workerIps = sh(
-                        script: 'aws ec2 describe-instances --filters "Name=tag:Role,Values=worker" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text --region ${AWS_REGION}',
+                        script: """
+                            aws ec2 describe-instances \
+                            --region ${AWS_REGION} \
+                            --filters "Name=tag:Role,Values=worker" "Name=instance-state-name,Values=running" \
+                            --query "Reservations[].Instances[].PrivateIpAddress" \
+                            --output text
+                        """,
                         returnStdout: true
                     ).trim()
+
+                    echo "Found worker IPs: ${workerIps}"
 
                     def workerList = workerIps.split()
                     for (worker in workerList) {
