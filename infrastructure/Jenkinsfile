@@ -62,7 +62,6 @@ pipeline {
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${env.ECR_URL}
                         docker push ${env.ECR_URL}:${env.BUILD_NUMBER}
-                        docker push ${env.ECR_URL}:latest
                     """
                 }
             }
