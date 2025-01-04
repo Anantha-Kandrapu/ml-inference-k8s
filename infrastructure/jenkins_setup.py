@@ -28,7 +28,7 @@ mkdir -p /etc/docker
 cat <<EOF > /etc/docker/daemon.json
 {{
     "features": {{
-        "buildkit": true
+        "buildkit": false
     }},
     "memory": "8g",
     "memory-swap": "16g"
@@ -140,8 +140,6 @@ chown -R jenkins:jenkins /var/lib/jenkins
 # Add memory configuration for Jenkins
 echo 'JAVA_ARGS="-Xmx4096m -Xms2048m"' >> /etc/default/jenkins
 
-# Verify BuildKit installation
-buildctl --version || echo "BuildKit installation needs to be verified"
 
 # Restart Jenkins
 systemctl restart jenkins
