@@ -11,10 +11,10 @@ apt-get install -y openjdk-17-jdk
 
 # Install Jenkins
 curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo tee \
-  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+/usr/share/keyrings/jenkins-keyring.asc > /dev/null
 echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
+https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+/etc/apt/sources.list.d/jenkins.list > /dev/null
 apt-get update
 apt-get install -y jenkins
 
@@ -22,7 +22,29 @@ apt-get install -y jenkins
 apt-get install -y docker.io
 usermod -aG docker jenkins
 systemctl enable docker
-systemctl start docker
+
+# Configure Docker with BuildKit
+mkdir -p /etc/docker
+cat <<EOF > /etc/docker/daemon.json
+{{
+    "features": {{
+        "buildkit": true
+    }},
+    "memory": "8g",
+    "memory-swap": "16g"
+}}
+EOF
+
+# Restart Docker to apply changes
+systemctl restart docker
+
+# Install BuildKit standalone (optional, as backup)
+apt-get install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    buildkit-tools
 
 # Install AWS CLI and other tools
 apt-get install -y awscli git jq
@@ -35,51 +57,53 @@ mkdir -p /var/lib/jenkins/jobs/ml-inference
 cat <<EOF > /var/lib/jenkins/jobs/ml-inference/config.xml
 <?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
-  <description>ML Inference Pipeline</description>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
-    <scm class="hudson.plugins.git.GitSCM">
-      <configVersion>2</configVersion>
-      <userRemoteConfigs>
-        <hudson.plugins.git.UserRemoteConfig>
-          <url>{github_repo}</url>
-        </hudson.plugins.git.UserRemoteConfig>
-      </userRemoteConfigs>
-      <branches>
-        <hudson.plugins.git.BranchSpec>
-          <name>*/main</name>
-        </hudson.plugins.git.BranchSpec>
-      </branches>
-    </scm>
-    <scriptPath>infrastructure/Jenkinsfile</scriptPath>
-  </definition>
+<description>ML Inference Pipeline</description>
+<definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
+<scm class="hudson.plugins.git.GitSCM">
+<configVersion>2</configVersion>
+<userRemoteConfigs>
+<hudson.plugins.git.UserRemoteConfig>
+<url>{github_repo}</url>
+</hudson.plugins.git.UserRemoteConfig>
+</userRemoteConfigs>
+<branches>
+<hudson.plugins.git.BranchSpec>
+<name>*/main</name>
+</hudson.plugins.git.BranchSpec>
+</branches>
+</scm>
+<scriptPath>infrastructure/Jenkinsfile</scriptPath>
+</definition>
 </flow-definition>
 EOF
 
-# Store ECR URL and GitHub repo in Jenkins global environment
+# Store ECR URL, GitHub repo, and BuildKit configuration in Jenkins global environment
 mkdir -p /var/lib/jenkins/init.groovy.d
-# Around line 89, modify the existing set-env.groovy script to include IP update
 cat <<EOF > /var/lib/jenkins/init.groovy.d/set-env.groovy
 import jenkins.model.Jenkins
 import jenkins.model.JenkinsLocationConfiguration
+
 def instance = Jenkins.getInstance()
 def globalNodeProperties = instance.getGlobalNodeProperties()
 def envVarsNodePropertyList = globalNodeProperties.getAll(hudson.slaves.EnvironmentVariablesNodeProperty.class)
 def envVars = envVarsNodePropertyList.get(0)?.getEnvVars()
+
 if (envVars == null) {{
     envVars = new hudson.slaves.EnvironmentVariablesNodeProperty().getEnvVars()
     globalNodeProperties.add(new hudson.slaves.EnvironmentVariablesNodeProperty(envVars))
 }}
+
 envVars.put("ECR_URL", "{ecr_url}")
 envVars.put("GITHUB_REPO", "{github_repo}")
+envVars.put("DOCKER_BUILDKIT", "1")
+
 instance.save()
 
-# Add these lines for IP update
 def jenkinsLocationConfiguration = JenkinsLocationConfiguration.get()
 def publicIP = new URL("http://169.254.169.254/latest/meta-data/public-ipv4").text
 jenkinsLocationConfiguration.setUrl("http://" + publicIP + ":8080/")
 jenkinsLocationConfiguration.save()
 EOF
-
 
 # Set correct permissions
 chown -R jenkins:jenkins /var/lib/jenkins/init.groovy.d/
@@ -116,20 +140,13 @@ chown -R jenkins:jenkins /var/lib/jenkins
 # Add memory configuration for Jenkins
 echo 'JAVA_ARGS="-Xmx4096m -Xms2048m"' >> /etc/default/jenkins
 
-# Add Docker memory limits
-cat <<EOF > /etc/docker/daemon.json
-{{
-  "memory": "8g",
-  "memory-swap": "16g"
-}}
-EOF
+# Verify BuildKit installation
+buildctl --version || echo "BuildKit installation needs to be verified"
 
 # Restart Jenkins
 systemctl restart jenkins
 
 # Wait for Jenkins to restart
 sleep 30
-
-
 echo "Jenkins setup completed"
 """
