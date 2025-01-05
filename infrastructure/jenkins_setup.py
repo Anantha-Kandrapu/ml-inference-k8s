@@ -3,6 +3,13 @@ def get_jenkins_user_data(
     github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s",
     branch="pureDev",
 ):
+    # If ecr_url is a Pulumi Output, we need to get its string value
+    if hasattr(ecr_url, "apply"):
+        # Use a placeholder that will be replaced with the actual value
+        ecr_url_placeholder = "${ECR_URL}"
+    else:
+        ecr_url_placeholder = str(ecr_url)
+
     job_config = f"""<?xml version='1.1' encoding='UTF-8'?>
     <flow-definition plugin="workflow-job">
         <description>ML Inference Pipeline</description>
