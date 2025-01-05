@@ -4,27 +4,27 @@ def get_jenkins_user_data(
     branch="pureDev",
 ):
     job_config = f"""<?xml version='1.1' encoding='UTF-8'?>
-<flow-definition plugin="workflow-job">
-  <description>ML Inference Pipeline</description>
-  <keepDependencies>false</keepDependencies>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
-    <scm class="hudson.plugins.git.GitSCM">
-      <configVersion>2</configVersion>
-      <userRemoteConfigs>
-        <hudson.plugins.git.UserRemoteConfig>
-          <url>{ecr_url}</url>
-        </hudson.plugins.git.UserRemoteConfig>
-      </userRemoteConfigs>
-      <branches>
-        <hudson.plugins.git.BranchSpec>
-          <name>*/{branch}</name>
-        </hudson.plugins.git.BranchSpec>
-      </branches>
-    </scm>
-    <scriptPath>infrastructure/Jenkinsfile</scriptPath>
-    <lightweight>true</lightweight>
-  </definition>
-</flow-definition>"""
+    <flow-definition plugin="workflow-job">
+        <description>ML Inference Pipeline</description>
+        <keepDependencies>false</keepDependencies>
+        <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
+            <scm class="hudson.plugins.git.GitSCM">
+                <configVersion>2</configVersion>
+                <userRemoteConfigs>
+                    <hudson.plugins.git.UserRemoteConfig>
+                        <url>{github_repo}</url>
+                    </hudson.plugins.git.UserRemoteConfig>
+                </userRemoteConfigs>
+                <branches>
+                    <hudson.plugins.git.BranchSpec>
+                        <name>*/{branch}</name>
+                    </hudson.plugins.git.BranchSpec>
+                </branches>
+            </scm>
+            <scriptPath>infrastructure/Jenkinsfile</scriptPath>
+            <lightweight>true</lightweight>
+        </definition>
+    </flow-definition>"""
 
     # Define required plugins
     JENKINS_PLUGINS = [
