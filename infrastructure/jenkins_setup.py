@@ -1,30 +1,30 @@
 def get_jenkins_user_data(
-    ecr_url="891377360402.dkr.ecr.us-west-2.amazonaws.com/k8_ecr_01",
+    ecr_url,
     github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s",
     branch="pureDev",
 ):
 
     job_config = f"""<?xml version='1.1' encoding='UTF-8'?>
     <flow-definition plugin="workflow-job">
-        <description>ML Inference Pipeline</description>
-        <keepDependencies>false</keepDependencies>
-        <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
-            <scm class="hudson.plugins.git.GitSCM">
-                <configVersion>2</configVersion>
-                <userRemoteConfigs>
-                    <hudson.plugins.git.UserRemoteConfig>
-                        <url>{github_repo}</url>
-                    </hudson.plugins.git.UserRemoteConfig>
-                </userRemoteConfigs>
-                <branches>
-                    <hudson.plugins.git.BranchSpec>
-                        <name>*/{branch}</name>
-                    </hudson.plugins.git.BranchSpec>
-                </branches>
-            </scm>
-            <scriptPath>infrastructure/Jenkinsfile</scriptPath>
-            <lightweight>true</lightweight>
-        </definition>
+      <description>ML Inference Pipeline</description>
+      <keepDependencies>false</keepDependencies>
+      <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
+        <scm class="hudson.plugins.git.GitSCM">
+          <configVersion>2</configVersion>
+          <userRemoteConfigs>
+            <hudson.plugins.git.UserRemoteConfig>
+              <url>{github_repo}</url>
+            </hudson.plugins.git.UserRemoteConfig>
+          </userRemoteConfigs>
+          <branches>
+            <hudson.plugins.git.BranchSpec>
+              <name>*/{branch}</name>
+            </hudson.plugins.git.BranchSpec>
+          </branches>
+        </scm>
+        <scriptPath>infrastructure/Jenkinsfile</scriptPath>
+        <lightweight>true</lightweight>
+      </definition>
     </flow-definition>"""
 
     # Define required plugins
