@@ -3,3 +3,5 @@ venv/
 .vscode/
 infrastructure/ml-inference
 infrastructure/ml-inference.pub
+infrastructure/mlInference
+infrastructure/mlInference.pub

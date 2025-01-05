@@ -3,24 +3,24 @@ import pulumi
 import pulumi_aws as aws
 import logging
 import os
-from user_data import worker_user_data, master_user_data
+from data import get_master_user_data, get_worker_user_data
 from jenkins_setup import get_jenkins_user_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Generate key pair if it doesn't exist
-if not os.path.exists("ml-inference.pub"):
-    os.system("ssh-keygen -t rsa -b 2048 -f ml-inference -N ''")
+if not os.path.exists("mlInference.pub"):
+    os.system("ssh-keygen -t rsa -b 2048 -f mlInference -N ''")
 
 # Read the public key
-with open("ml-inference.pub", "r") as f:
+with open("mlInference.pub", "r") as f:
     public_key = f.read().strip()
 
 # Create key pair in AWS
 key_pair = aws.ec2.KeyPair(
-    "ml-infer-key",
-    key_name="ml-infer-key",
+    "ml_infer_key",
+    key_name="mlInference",
     public_key=public_key,
     tags={"Name": "mlInference"},
 )
@@ -82,6 +82,33 @@ ecr_policy = aws.iam.Policy(
         }
     ),
 )
+# Add EC2 read policy
+ec2_policy = aws.iam.Policy(
+    "ec2-policy",
+    policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "ec2:DescribeInstances",
+                        "ec2:DescribeTags",
+                    ],
+                    "Resource": "*",
+                }
+            ],
+        }
+    ),
+)
+
+# Attach the EC2 policy to the instance role
+aws.iam.RolePolicyAttachment(
+    "ec2-policy-attachment",
+    role=instance_role.name,
+    policy_arn=ec2_policy.arn,
+)
+
 cloudwatch_policy = aws.iam.Policy(
     "cloudwatch-policy",
     policy=json.dumps(
@@ -143,10 +170,10 @@ aws.iam.RolePolicyAttachment(
 
 # Create ECR repository
 ecr_repo = aws.ecr.Repository(
-    "ml-infer-ecr",
-    name="ml-infer-ecr",
+    "k8s_ecr_01",
+    name="k8_ecr_01",
     image_scanning_configuration={"scanOnPush": True},
-    tags={"Name": "ml-infer"},
+    tags={"Name": "k8_ecr_01"},
 )
 
 # Export the repository URL
@@ -335,7 +362,7 @@ jenkins_instance = aws.ec2.Instance(
     key_name=EC2_CONFIG["key_name"],
     subnet_id=public_subnets[0].id,
     vpc_security_group_ids=[jenkins_sg.id],
-    iam_instance_profile=instance_profile.name,  # Use same profile or create specific
+    iam_instance_profile=instance_profile.name,
     user_data=get_jenkins_user_data(ecr_repo.repository_url),
     root_block_device={
         "volume_size": 100,
@@ -348,29 +375,6 @@ jenkins_instance = aws.ec2.Instance(
         "http_put_response_hop_limit": 1,
     },
     tags={"Name": "jenkins"},
-)
-
-# Create master node
-logger.info("Creating master node...")
-master = aws.ec2.Instance(
-    "ml-master",
-    instance_type=EC2_CONFIG["master_instance_type"],
-    ami=EC2_CONFIG["master_ami_id"],
-    key_name=EC2_CONFIG["key_name"],
-    iam_instance_profile=instance_profile.name,
-    subnet_id=public_subnets[0].id,
-    vpc_security_group_ids=[master_sg.id],
-    metadata_options={
-        "http_endpoint": "enabled",
-        "http_tokens": "required",
-        "http_put_response_hop_limit": 1,
-    },
-    root_block_device={
-        "volume_size": 100,
-        "volume_type": "gp3",
-    },
-    user_data=master_user_data,
-    tags={"Name": "ml-master", "Role": "master"},
 )
 
 # After creating subnets and security groups, add:
@@ -399,11 +403,36 @@ for i in range(EC2_CONFIG["worker_count"]):
             "http_tokens": "required",  # This enforces IMDSv2
             "http_put_response_hop_limit": 1,
         },
-        user_data=worker_user_data,
+        user_data=get_worker_user_data(),
         tags={"Name": f"ml-worker-{i}"},
-        opts=pulumi.ResourceOptions(depends_on=[master]),
     )
     worker_nodes.append(worker)
+
+# Create master node
+logger.info("Creating master node...")
+master = aws.ec2.Instance(
+    "ml-master",
+    instance_type=EC2_CONFIG["master_instance_type"],
+    ami=EC2_CONFIG["master_ami_id"],
+    key_name=EC2_CONFIG["key_name"],
+    iam_instance_profile=instance_profile.name,
+    subnet_id=public_subnets[0].id,
+    vpc_security_group_ids=[master_sg.id],
+    metadata_options={
+        "http_endpoint": "enabled",
+        "http_tokens": "required",
+        "http_put_response_hop_limit": 1,
+    },
+    root_block_device={
+        "volume_size": 100,
+        "volume_type": "gp3",
+    },
+    user_data=get_master_user_data(
+        master_name="ml-master",
+        worker_ips=[worker.private_ip for worker in worker_nodes],
+    ),
+    tags={"Name": "ml-master", "Role": "master"},
+)
 
 
 # Export values

@@ -19,6 +19,20 @@ async def predict(text: str):
     return {"result": result}
 
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
+@app.get("/predict")
+async def predict(text: str):
+    try:
+        result = model(text)
+        return {"result": result}
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
 if __name__ == "__main__":
     import uvicorn
 
