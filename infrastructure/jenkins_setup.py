@@ -1,31 +1,35 @@
 def get_jenkins_user_data(
     ecr_url,
-    github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s",
+    github_repo="https://github.com/Anantha-Kandrapu/ml-inference-k8s.git",  # Added .git
     branch="pureDev",
 ):
-
     job_config = f"""<?xml version='1.1' encoding='UTF-8'?>
-    <flow-definition plugin="workflow-job">
-      <description>ML Inference Pipeline</description>
-      <keepDependencies>false</keepDependencies>
-      <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
-        <scm class="hudson.plugins.git.GitSCM">
-          <configVersion>2</configVersion>
-          <userRemoteConfigs>
-            <hudson.plugins.git.UserRemoteConfig>
-              <url>{github_repo}</url>
-            </hudson.plugins.git.UserRemoteConfig>
-          </userRemoteConfigs>
-          <branches>
-            <hudson.plugins.git.BranchSpec>
-              <name>*/{branch}</name>
-            </hudson.plugins.git.BranchSpec>
-          </branches>
-        </scm>
-        <scriptPath>infrastructure/Jenkinsfile</scriptPath>
-        <lightweight>true</lightweight>
-      </definition>
-    </flow-definition>"""
+<flow-definition plugin="workflow-job">
+  <description>ML Inference Pipeline</description>
+  <keepDependencies>false</keepDependencies>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
+    <scm class="hudson.plugins.git.GitSCM">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{github_repo}</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>refs/heads/{branch}</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>infrastructure/Jenkinsfile</scriptPath>
+    <lightweight>true</lightweight>
+  </definition>
+</flow-definition>"""
+
+    # Rest of your existing code with JENKINS_PLUGINS, etc.
 
     # Define required plugins
     JENKINS_PLUGINS = [
